@@ -1,0 +1,15 @@
+server:
+    address: localhost
+    port: 8081
+spring:
+    data:
+        mongodb:
+           uri: mongodb://localhost:27017/test
+    http:
+        multipart:
+            max-file-size: 1024KB
+            max-request-size: 1024KB
+    thymeleaf:
+        cache: false
+        encoding: UTF-8
+        mode: HTML5

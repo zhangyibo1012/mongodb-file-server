@@ -1,16 +1,20 @@
 package cn.orgtec.file.controller.rest;
 
+import cn.hutool.crypto.SecureUtil;
 import cn.orgtec.file.entity.FileEntity;
 import cn.orgtec.file.service.FileService;
 import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
+import org.bson.types.Binary;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.List;
 import java.util.Optional;
@@ -18,14 +22,78 @@ import java.util.Optional;
 /**
  *  文件图片服务控制器
  *
+ *   RequiredArgsConstructor
+ *   会生成一个包含常量（final），和标识了@NotNull的变量 的构造方法
  * @author Yibo Zhang
  * @date 2019/08/07
  */
 @RestController
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class FileController {
 
     private final FileService fileService;
+
+    @Value("${server.address}")
+    private String serverAddress;
+
+    @Value("${server.port}")
+    private String serverPort;
+
+    /**
+     * 上传接口
+     *
+     * @param file  文件
+     * @return      ResponseEntity<String>
+     */
+    @PostMapping(value = "/upload")
+    public ResponseEntity<String> handleFileUpload(@RequestParam("file") MultipartFile file) {
+        FileEntity returnFile;
+        try {
+            FileEntity entity = new FileEntity(file.getOriginalFilename(), file.getContentType(), file.getSize(),
+                    new Binary(file.getBytes()));
+            entity.setMd5(SecureUtil.md5(file.getInputStream()));
+            returnFile = fileService.saveFile(entity);
+            String path = "//" + serverAddress + ":" + serverPort + "/view/" + returnFile.getId();
+            return ResponseEntity.status(HttpStatus.OK).body(path);
+
+        } catch (IOException  ex) {
+            ex.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ex.getMessage());
+        }
+
+    }
+
+    /**
+     * 根据 id 删除文件
+     *
+     * @param id 文件 id
+     * @return
+     */
+    @DeleteMapping(value = "/{id}")
+    public ResponseEntity<String> deleteFile(@PathVariable(value = "id") String id) {
+
+        try {
+            fileService.removeFile(id);
+            return ResponseEntity.status(HttpStatus.OK).body("DELETE Success!");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
+    /**
+     * 删除全部文件
+     *
+     */
+    @DeleteMapping(value = "/deleteAll")
+    public ResponseEntity<String> deleteAll() {
+
+        try {
+            fileService.deleteAll();
+            return ResponseEntity.status(HttpStatus.OK).body("DELETE Success!");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
 
     /**
      * 分页查询文件
@@ -34,7 +102,7 @@ public class FileController {
      * @param pageSize   每页显示的数量
      * @return           List<FileEntity>
      */
-    @GetMapping(value = "files/{pageIndex}/{pageSize}")
+    @GetMapping(value = "/files/{pageIndex}/{pageSize}")
     public List<FileEntity> listFilesByPage(@PathVariable(value = "pageIndex") int pageIndex, @PathVariable(value = "pageSize") int pageSize) {
         return fileService.listFilesByPage(pageIndex, pageSize);
     }
@@ -42,11 +110,10 @@ public class FileController {
     /**
      * 获取文件片信息
      *
-     * @param id
-     * @return
-     * @throws UnsupportedEncodingException
+     * @param id  文件id
+     * @return    ResponseEntity<Object>
      */
-    @GetMapping("files/{id}")
+    @GetMapping(value = "/files/{id}")
     public ResponseEntity<Object> serveFile(@PathVariable(value = "id") String id) throws UnsupportedEncodingException {
 
         Optional<FileEntity> file = fileService.getFileById(id);
