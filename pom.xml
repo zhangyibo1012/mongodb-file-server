@@ -60,12 +60,6 @@
             <artifactId>hutool-all</artifactId>
             <version>${hutool.version}</version>
         </dependency>
-        <!--稳定版本，替代spring security 内置  编码测试阶段屏蔽-->
-        <!--<dependency>-->
-            <!--<groupId>org.springframework.security.oauth</groupId>-->
-            <!--<artifactId>spring-security-oauth2</artifactId>-->
-            <!--<version>${security.oauth.version}</version>-->
-        <!--</dependency>-->
     </dependencies>
 
     <dependencyManagement>
